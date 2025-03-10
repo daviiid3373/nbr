@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاسبه قیمت اورینگ لاستیکی (NBR)</title>
+    <style>
+        /* استایل‌های قبلی بدون تغییر */
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            direction: rtl;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            transform: perspective(1000px) rotateX(10deg);
+            width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: right;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.05), 0 4px 20px rgba(52,152,219,0.15);
+            transition: all 0.3s ease;
+        }
+        button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 1rem;
+            box-shadow: 0 6px 15px rgba(52,152,219,0.4);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(52,152,219,0.5);
+        }
+        #result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            font-weight: bold;
+            display: none;
+            background: rgba(236, 240, 241, 0.9);
+            border-radius: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>محاسبه قیمت اورینگ لاستیکی (NBR)</h1>
+        
+        <div class="input-group">
+            <label for="outer-diameter">قطر خارجی اورینگ (میلیمتر)</label>
+            <input type="number" id="outer-diameter" step="0.1" min="1" max="400" placeholder="مثال: ۱۵۰">
+        </div>
+
+        <div class="input-group">
+            <label for="thickness">انتخاب ضخامت اورینگ</label>
+            <select id="thickness"></select>
+        </div>
+
+        <button onclick="calculatePrice()">محاسبه قیمت</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // تنظیمات قیمت برای بازه‌های خاص
+        const specialRanges = {
+            "1-9.5": {
+                thicknessOptions: [{text: "تمامی ضخامت‌ها تا ۳ میلیمتر", value: "fixed"}],
+                price: 3320
+            },
+            "10-14.5": {
+                thicknessOptions: [
+                    {text: "تمامی ضخامت‌ها تا ۳ میلیمتر", value: "fixed1"},
+                    {text: "ضخامت از ۳ تا ۴ میلیمتر", value: "fixed2"}
+                ],
+                prices: [3828, 4750]
+            },
+            "15-19.5": {
+                thicknessOptions: [
+                    {text: "تمامی ضخامت‌ها تا ۳ میلیمتر", value: "fixed3"},
+                    {text: "ضخامت از ۳ تا ۴ میلیمتر", value: "fixed4"}
+                ],
+                prices: [4590, 4750]
+            }
+        };
+
+        // رویداد تغییر قطر خارجی
+        document.getElementById('outer-diameter').addEventListener('input', function() {
+            const od = parseFloat(this.value);
+            const thicknessSelect = document.getElementById('thickness');
+            
+            thicknessSelect.innerHTML = '';
+            
+            if (od >= 1 && od <= 9.5) {
+                specialRanges["1-9.5"].thicknessOptions.forEach(option => {
+                    thicknessSelect.innerHTML += `<option value="${option.value}">${option.text}</option>`;
+                });
+            } 
+            else if (od >= 10 && od <= 14.5) {
+                specialRanges["10-14.5"].thicknessOptions.forEach(option => {
+                    thicknessSelect.innerHTML += `<option value="${option.value}">${option.text}</option>`;
+                });
+            } 
+            else if (od >= 15 && od <= 19.5) {
+                specialRanges["15-19.5"].thicknessOptions.forEach(option => {
+                    thicknessSelect.innerHTML += `<option value="${option.value}">${option.text}</option>`;
+                });
+            } 
+            else {
+                // لیست کامل ضخامت‌ها برای سایر بازه‌ها
+                const defaultOptions = [
+                    "2", "2.5", "3", "3.5", "4", "4.5", "5", "5.5", "6", "7", "8", "9", "10"
+                ].map(value => `<option value="${value}">${value} میلیمتر</option>`).join('');
+                thicknessSelect.innerHTML = defaultOptions;
+            }
+        });
+
+        function calculatePrice() {
+            const od = parseFloat(document.getElementById('outer-diameter').value);
+            const thicknessValue = document.getElementById('thickness').value;
+            let finalPrice = 0;
+
+            // اعتبارسنجی
+            if (isNaN(od) || od < 1 || od > 400) {
+                showError("لطفا قطر خارجی را بین ۱ تا ۴۰۰ میلیمتر وارد کنید");
+                return;
+            }
+
+            // محاسبه قیمت برای بازه‌های خاص
+            if (od >= 1 && od <= 9.5) {
+                finalPrice = 3320;
+            } 
+            else if (od >= 10 && od <= 14.5) {
+                finalPrice = thicknessValue === "fixed1" ? 3828 : 4750;
+            } 
+            else if (od >= 15 && od <= 19.5) {
+                finalPrice = thicknessValue === "fixed3" ? 4590 : 4750;
+            } 
+            else {
+                // محاسبات قبلی برای سایر بازه‌ها
+                const thickness = parseFloat(thicknessValue);
+                const priceCoefficients = {
+                    2: od >= 41 && od <= 400 && [2,2.5,3].includes(thickness) ? 382.4 : 320,
+                    2.5: 320, 3: 320,
+                    3.5: 401.6, 4: 460.8, 4.5: 515.2,
+                    5: 651.2, 5.5: 737.6, 6: 870.4,
+                    7: 1148.8, 8: 1582.4, 9: 1889.6, 10: 2347.2
+                };
+
+                let basePrice = od * priceCoefficients[thickness];
+                let multiplier = 1;
+
+                if (od >= 100 && od <= 150) multiplier = 1.15;
+                else if (od >= 151 && od <= 200) multiplier = 1.20;
+                else if (od >= 201 && od <= 249) multiplier = 1.30;
+                else if (od >= 250 && od <= 299) multiplier = 1.40;
+                else if (od >= 300 && od <= 350) multiplier = 1.50;
+                else if (od >= 351 && od <= 400) multiplier = 1.70;
+
+                if ([8,9,10].includes(thickness) && od >= 20 && od <= 99) {
+                    multiplier = 1;
+                }
+
+                finalPrice = Math.round(basePrice * multiplier);
+            }
+
+            showResult(`قیمت نهایی: ${finalPrice.toLocaleString('fa-IR')} ریال`);
+        }
+
+        // توابع نمایش نتیجه و خطا
+        function showResult(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div style="color: #27ae60;">${message}</div>`;
+            resultDiv.style.display = 'block';
+        }
+
+        function showError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div style="color: #e74c3c;">${message}</div>`;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
